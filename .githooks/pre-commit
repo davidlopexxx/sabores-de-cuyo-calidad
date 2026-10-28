@@ -1,0 +1,53 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# Pre-commit hook - Sabores de Cuyo
+# Corre en este orden: 1) Formatter  2) Linter  3) Tests unitarios.
+# Los tres controles son obligatorios: si uno falla, el commit se cancela
+# y los pasos que quedan NO se ejecutan.
+# Se activa una sola vez con:  git config core.hooksPath .githooks
+# ---------------------------------------------------------------------------
+
+# Maven: usa el wrapper si existe; si no, el mvn del PATH
+if [ -x "./mvnw" ]; then
+    MVN="./mvnw"
+elif command -v mvn >/dev/null 2>&1; then
+    MVN="mvn"
+else
+    echo "[pre-commit] ERROR: no encuentro Maven (ni ./mvnw ni mvn en el PATH)."
+    echo "[pre-commit] COMMIT CANCELADO."
+    exit 1
+fi
+
+# paso "<nombre>" "<ayuda si falla>" <comando...>
+paso() {
+    nombre="$1"
+    ayuda="$2"
+    shift 2
+    echo ""
+    echo "[pre-commit] >>> $nombre"
+    if "$@"; then
+        echo "[pre-commit] $nombre: OK"
+    else
+        echo ""
+        echo "[pre-commit] $nombre: FALLO"
+        echo "[pre-commit] $ayuda"
+        echo "[pre-commit] COMMIT CANCELADO. Corregi el problema y volve a hacer el commit."
+        exit 1
+    fi
+}
+
+paso "1/3 Formatter (Spotless)" \
+    "Para arreglar el formato solo: $MVN spotless:apply" \
+    $MVN -B -ntp spotless:check
+
+paso "2/3 Linter (Checkstyle)" \
+    "Corregi las violaciones que figuran arriba (archivo y linea)." \
+    $MVN -B -ntp checkstyle:check
+
+paso "3/3 Tests unitarios (JUnit)" \
+    "Hay tests que fallan: mira el detalle arriba o en target/surefire-reports." \
+    $MVN -B -ntp test
+
+echo ""
+echo "[pre-commit] Todos los controles pasaron. Se continua con el commit."
+exit 0

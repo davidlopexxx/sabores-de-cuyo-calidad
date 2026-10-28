@@ -1,0 +1,7 @@
+# Revisa cada semana si hay versiones nuevas (o con vulnerabilidades corregidas) de las dependencias
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
